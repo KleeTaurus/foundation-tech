@@ -17,7 +17,7 @@
 
 1. 题目汇总:
 
-   Issues 创建选题条目(tag 选题), 评论每人提交一或两个文章, 需要保证, 一 没人翻译过; 二 自己读过, 给出推荐理由; 三 文章足够长, 至少够20分钟阅读, 有丰富的代码示例; 四 实效性好, 比如紧随热点(go module), 比如这个就不适合([Simple, Fast, and Practical Non-Blocking and Blocking
+   Issues 创建选题条目(tag 选题), 评论每人提交一或两个文章, 需要保证, 一 没人翻译过; 二 自己读过, 给出推荐理由; 三 文章足够长, 至少够20分钟阅读, 有丰富的代码示例; 四 实效性好, 比如紧随热点(go module), 比如这个就不适合 [Simple, Fast, and Practical Non-Blocking and Blocking
    Concurrent Queue Algorithms](http://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf)
 
 2. 投票:
