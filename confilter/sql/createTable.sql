@@ -61,3 +61,6 @@ CREATE TABLE `group_dic` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_gd` (`group_id`,`dic_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- todo design
+-- table sync_job (一个产品线，一段时间内积累的可以同步的job ， 包括产品线，词典组，词典的新增，删除和修改)
