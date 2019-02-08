@@ -159,9 +159,9 @@ This way, validation errors are a legitimate part of function return, and we hav
 
 It is always a good idea to provide your errors with some additional information. Many popular Go packages use their own implementations of the error interface, imgproxy is not the exception. Here, I use my custom imgproxyError type that can tell HTTP handler what status to respond with, keeps a message that should be shown to a user, and a message that should appear in the log.
 
-就这样，错误验证是函数返回的合法部分，我们减少了user.Save方法的副作用。所有非预期的错误都是在显示的进行处理的，而不是隐藏在框架里面的。如果还出现问题，我们可以采取必要的措施，handle了之后再做其他的。
+就这样，错误验证是函数返回的合法部分，我们减少了user.Save方法的副作用。所有非预期的错误都是在显式的进行处理，而不是隐藏在框架里面。如果还出现问题，我们可以采取必要的措施，handle了之后再做其他的。
 
-返回错误的时候如果有额外的信息，这总归是好的。许多流行的Go包都会用他们自己实现的error接口，强如imgproxy也不例外。此处，我用了自定义的imgproxyError struct，它来告诉http handler应该返回什么http status code，返回给上层调用者什么消息，在log中应该打印什么信息。
+返回错误的时候如果有额外的信息，这总归是好的。许多流行的Go包都会用他们自己实现的error接口，比如我的imgproxy也不例外。此处，我用了自定义的imgproxyError struct，它来告诉http handler应该返回什么http status code，返回给上层调用者什么消息，在log中应该打印什么信息。
 
 ```go
 type imgproxyError struct {
