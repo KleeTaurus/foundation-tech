@@ -517,9 +517,9 @@ if err := g.Wait(); err != nil {
 
 Only the first non-nil error (if any) from one of the subroutines launched from the inside of errgroup.Group will be returned. All the heavy lifting is done behind the scenes.
 
-### Roll your own PanicGroup
+### 开始你自己的 PanicGroup
 
-As we mentioned before, all goroutines panic at their own level, and if you want to use my “Panic-Driven Error Handling” inside your goroutines, you have to do a little more work. Too bad, but errgroup will not be of help. Nothing prevents us from implementing our own PanicGroup though! Here is the complete implementation:
+正如之前提到的，所有的 Go routines 在他们自己的范围里发生恐慌。如果你想在goroutines中使用“恐慌驱动错误处理”模式，你还需要做一点点其他的工作。糟糕的是 errgroup 不会有所帮助。然而，没有任何人阻止我们实现一遍我们自己的 PanicGroup！下面试一下完整的实现：
 
 ```go
 type PanicGroup struct {
@@ -541,7 +541,7 @@ func (g *PanicGroup) Go(f func()) {
     defer func(){
       if r := recover(); r != nil {
         if err, ok := r.(error); ok {
-          // We need only the first error, sync.Once is useful here.
+          // 我们仅仅需要第一个错误, sync.Onece 在这里很有帮助.
           g.errOnce.Do(func() {
             g.err = err
           })
@@ -556,7 +556,7 @@ func (g *PanicGroup) Go(f func()) {
 }
 ```
 
-Now we can use our PanicGroup like this:
+现在，我们可以像下面这样，使用我们自己的 PanicGroup：
 
 ```go
 func checkErr(err error) {
@@ -570,7 +570,7 @@ func Foo() {
 
   // Goroutine #1
   g.Go(func() {
-    // If any error has occurred, panic.
+    // 如果在这里发生了任何错误, panic.
     checkErr(dangerous.Action())
   })
 
@@ -585,15 +585,15 @@ func Foo() {
 }
 ```
 
-And this is how we keep our code clear and concise even when dealing with multiple goroutines, each capable of raising its own kind of panic.
+所以， 当我们需要处理多个goroutines， 并且每个gorooutines还需要抛出它自定义的panic时， 我们仍然可以通过上面的方式， 来保证代码清晰，简练。
 
-### Acceptance (and happiness)
+### 接受(并且真香)
 
-Thank you for making it through my article! Now that we can see why error handling in Go looks the way it does, what are the most common concerns, and how to get around them while Go 2 is still far on a horizon, our therapy is completed.
+感谢您看完了我的文章。现在，我们就能了解到为什么Go语言里的错误处理是这个样子，什么才是大家最关心的问题，以及当Go 2仅仅出现一点点苗头的时候，我们怎么去克服这些困难。我们的"疗法"很完整。
 
-After passing through all five stages of grief myself, I realized that errors in Go should be seen not as a cause of pain, but as a flexible and powerful instrument for flow control.
-Whenever you need to deal with an error right after it occurred—an old good if err != nil is a perfect choice. If you need to deal with all your errors in a single a place: bubble them up. Adding context to your errors will be beneficial at this point, so you don’t lose track of what is happening and can handle each kind of error properly.
+当浏览完我所有的5个悲伤的阶段，我意识到，Go里面的错误处理不应该被当成一种痛苦，反而相对于流程控制而言，是一种强大的，灵活的工具。
+无论任何时候，在错误刚刚出现的后面，通过 if err != nil 来处理是一种完美的选择。如果你需要在一个地方集中处理所有的错误，将错误向上逐层返回上浮。在这一点上，为错误添加上下文将是有益的，因此您不会忘记正在发生的事情并且可以正确处理每种错误。
 
-If you need to stop the program flow entirely after an error has occurred—feel free to use the “Panic-Driven Error Handling” that I described, and don’t forget to share your experience with me through Twitter.
+如果您需要在发生错误后完全停止程序流程，请随便使用我所描述的“恐慌驱动错误处理”，并且不要忘记通过 Twitter 与我分享您的经验。
 
-And last but not least, remember there is always log.Fatal if things should ever go really, really wrong.
+最后一个要点，请记住，当事情真的发生了错误，保证总会有log.Fatal去记录一下。
