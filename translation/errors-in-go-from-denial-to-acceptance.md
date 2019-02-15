@@ -7,17 +7,17 @@ Errors in Go: From denial to acceptance
 > * 译者：[linuxfish](https://github.com/cs50Mu)
 > * 校对者：[]()
 
-As an English poet once said, “To err is human, to forgive, divine”. Error handling is an integral part of programming, but in many popular languages, it comes as an afterthought.
+正如一位英国诗人所说的，“犯错是人，宽恕是神”。错误处理是编程实践中非常重要的一部分，但在很多流行语言中并没有对它有足够的重视。
 
-The godfather of numerous programming dialects, C, never had a dedicated error or exception mechanism in the first place. It is up to the programmer to accurately report whether the function did what it was intended to do, or threw a tantrum—usually by relying on integers. In case of a segmentation fault—well, all bets are off.
+作为众多语言的鼻祖，C语言，从一开始就没有一个完善的错误处理和异常机制。在C语言中，错误处理完全由程序员来负责，要么通过设置一个错误码，或者程序直接就崩溃了（segment fault）。
 
-Even though the idea of exception handling predated C and originated in LISP 1.5 as early as 1962, it was not until well into the 80s that it became commonplace. C++ (and then Java) got programmers used to try...catch blocks, and all interpreted languages we know and love followed suit.
+虽然异常处理机制早在C语言发明之前就出现了（最早由LISP 1.5在1962年支持），但直到19世纪80年代它才流行开来。C++和Java让程序员熟悉了try...catch这一模式，所有的解释型语言也沿用了这一模式。
 
-Regardless of syntax details—whether it is try or begin—the concept of error handling in every language I encountered always appeared after the first few bends of the learning curve. Usually, you disregard it when you start small, and then it finally (pun intended) dawns on you when you build your first Real Thing. At least for me, that was always the case.
+尽管在语法上略有差异（比如是用try还是begin），我之前遇到的每一种语言在一开始学习的时候都不会让你注意到错误处理的概念。通常，在你刚开始写着玩的时候根本用不到它，只有当你开始写一个真正的项目时才会意识到需要有错误处理。至少对于我而言，一直如此。
 
-And then an energetic young gopher language came along: the time had come to start on a Tour of Go for the first introduction into its mysteries.
+然后我遇到了Golang：一开始大家都是从《a Tour of Go》来认识它的。
 
-As I went down the gopher hole, I was constantly reminded of errors with variables named err sprinkled all over. No matter how big and “serious” is a Go project, one pattern appears all the time:
+在学习《a Tour of Go》的过程中，不断的有err这样代表错误的变量映入眼帘。不管一个 Go 项目有多大，一种模式总是存在：
 
 ```go
 f, err := os.Open(filename)
@@ -26,27 +26,28 @@ if err != nil {
 }
 ```
 
-By Go’s convention, every function that can cause an error returns one as the last return value, and it is programmer’s responsibility to handle it properly at each step, hence the ubiquitous if err != nil statement.
+根据 Go 的惯例，每一个会出现错误的函数需要在最后一个返回值中返回它（Go允许多返回值），程序员需要在每一次调用后都对返回的错误进行处理，因此就出现了随处可见的`if err != nil`代码片段。
 
-Dealing with every single error with conditionals is frustrating at first. For many new gophers, this is the moment of grief. We start to mourn error handling as we know it.
+一开始，每个函数调用后都进行一次错误检查让人感觉很崩溃。对于许多 Go 新手来说，这是很痛苦的。在我们刚接触到错误处理的时候就开始为它的繁琐而哀叹了。
 
-A well-known model for dealing with grief, and loss, was proposed by a Swiss-American psychiatrist Elisabeth Kübler-Ross in 1969. It is often referenced in popular culture and describes five stages: denial, anger, bargaining, depression, and acceptance. Although initially associated with death and mourning, it has since proven effective in reasoning about other significant changes that meet internal resistance. Learning an entirely different language is definitely one of them.
+有一个著名的用于处理悲痛和失去的模型，它是由美籍瑞士心理学家 Elisabeth Kübler-Ross 在1969年提出。它包含了五个阶段：拒绝，愤怒，讨价还价，失落，接受。虽然起初它主要是用于解决跟死亡和伤痛有关的问题，但事实已经证明，它在处理当一个人遇到重大的变动时内心产生抵抗时都是有效的。学习一门新的编程语言显然属于这一范畴。
 
-As I embraced the “Go way”, I went through all these stages myself, and I am going to share my journey with you.
+在我拥抱 Go 的错误处理模式的过程中，我经历了所有这五个阶段，下面我就跟你分享一下我的心路历程。
 
-Naturally, it all starts with denial.
+那么，一切都从拒绝开始说起吧。
 
 ### Denial
+### 拒绝
 
-“It must be a mistake; there should not be so many error checks…“
+“一定是哪里出错了，不应该出现这么多错误检查...”
 
-That is the thought that ran through my head as I wrote my first few hundred lines of Go code. I was subconsciously reaching for exceptions, but there were none to be found. Go does not have them, on purpose.
+这是我刚开始写 Go 代码时的想法。我下意识的想找 Go 里的异常机制，但我没找到。Go 有意地移除了对异常的支持。
 
-One problem with exceptions is that you never really know whether the function will throw one. Sure, Java has a throws keyword inside a function signature that is intended to make exceptions less of a surprise, but it leads to extremely verbose code, once the amount of expected exceptions grows. Relying on documentation is not a silver bullet either: poor documentation is still very much a thing. In languages other than Go, you need to either wrap everything in some equivalent of try...catch, or push your luck.
+使用异常的一个问题是你永远都不知道一个函数是否会抛异常。当然了，Java 通过`throws`关键字来显式声明了一个函数可能会抛出的异常，这解决了异常不明确的问题，但同时也使得代码变得非常啰嗦。有人说我可以在文档中把这个问题说清楚，但文档也不是银弹，糟糕过期的文档是大部分项目永远的痛。
 
-The “Go way” pushes for consistency: every (idiomatic) function that might fail, should return an error type as the last value, and be done with it.
+Go 中错误处理的惯常用法，体现了一致性：每一个可能失败的函数应当在最后一个返回值中返回一个error类型。
 
-Nothing explodes, the code keeps running (provided you handle that error further down the line), you are in a safe place. If error checking is not important in some case, you can just omit it. Thanks to the Golang’s concept of the zero value, you can often get away without error handling at all.
+如果你正常处理了错误，那一切相安无事，代码会继续运行。在某些情况下，如果你觉得没有必要进行错误检查，你可以忽略它，当出现错误时，其它的返回值是它的零值，并不会出现 C 语言中未初始化出现的种种问题。
 
 ```go
 // Let's convert a string into int64.
@@ -56,7 +57,7 @@ i, _ := strconv.ParseInt(strVal, 10, 64)
 log.Printf("Parsed value is: %d", i)
 ```
 
-However, if you only use the function for its side effects and never use the return value directly, it is easy to forget that is still may return an error. It makes sense always to check the documentation to find out whether an error type is a part of the function signature.
+但是如果你只用到一个函数的副作用，并不直接用到它的返回值，那么你很容易忘记这个函数可能还会返回一个错误。因此，在使用之前在文档中查看一下这个函数是否会返回错误永远都是明智的。
 
 ```go
 // http.ListenAndServe returns an error, but we don't check for it.
