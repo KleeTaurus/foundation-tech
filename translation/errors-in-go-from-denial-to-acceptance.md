@@ -73,11 +73,13 @@ if err != nil {
 
 ### Anger
 
-“There are so many programming languages that have “normal” error handling. Why should I use this weird “error as a result” piece of junk?”
+有许多编程语言都有所谓“正常”的错误处理（类似于try catch），那我为什么要用这种奇怪的像垃圾碎片一样的“错误也是一种结果”
 
-I have been there; I felt that anger too until I realized that errors in Go are not just a strange replacement for exceptions that I was used to. It is better to think of them as function success indicators.
+作为作者，我其实都经历过。Go不仅仅是将那些我习以为常的exception当成error来替换，直到我意识到这一点的时候，我对这门语言觉得愤慨。然后我勉励自己，最好将这种error视为方法成功执行的指示。
 
 If you ever used Active Record in Rails, you are probably familiar with this kind of code:
+
+如果你曾经在Rails中用过active record，你可能会熟悉这样的代码:
 
 ```go
 user = User.new(user_params)
@@ -88,9 +90,9 @@ else
 end
 ```
 
-A call to user.save returns a boolean value that indicates whether an instance of a User was successfully saved or not. A call to user.errors returns a list of errors that might have occurred: the errors object appears as a side effect of a save call—this approach is often criticized as an anti-pattern.
+if后面的user.save是一个bool值，它表示是否成功保存了用户的实例。user.errors则返回了可能发生的error列表结果。当时保存用户实例失败的时候，就会返回error（有点像副作用），这种方法经常被批评为反模式。
 
-Go, however, has a built-in pattern for reporting function’s “failure details” and it does not involve side effects. After all, error in Go is just an interface with a single method:
+然而，Go语言自带报告方法”失败细节“的内置模式，并且还没有什么副作用。毕竟，Go的error只是一个含有单个方法的接口:
 
 ```go
 type error interface {
@@ -98,7 +100,7 @@ type error interface {
 }
 ```
 
-We are free to extend this interface as much as we want. If we need to provide info about validation errors, we can define a type like this:
+我们可以任意去集成这个接口。如果想要提供一些验证错误的信息，可以定义如下的type：
 
 ```go
 type ValidationErr struct {
@@ -112,9 +114,9 @@ func (e *ValidationErr) Error() string {
 }
 ```
 
-I omit FormatErrors() definition as it is not relevant here. Let’s just say it combines error messages into a single string.
+因为格式化错误和本文不是很相关， 所以我省去了格式化错误。我们只说如何将错误信息合并成单个的字符串。
 
-Now let’s pretend that we use some imaginary Rails-like framework written in Go. The action handler might look like this:
+现在假设让我用一写Go编写的类Rails似的框架，actions handler就像这样：
 
 ```go
 func (a * Action) Handle() {
@@ -134,10 +136,9 @@ func (a * Action) Handle() {
 }
 ```
 
-This way, validation errors are a legitimate part of function return, and we have reduced the side effect of user.Save(). All handling of unexpected errors happens out in the open and is not hidden under the hood of the framework. If something went really wrong, we are free to take necessary steps before moving further.
+就这样，错误验证是函数返回的合法部分，我们减少了user.Save方法的副作用。所有非预期的错误都是在显式的进行处理，而不是隐藏在框架里面。如果还出现问题，我们可以采取必要的措施，handle了之后再做其他的。
 
-
-It is always a good idea to provide your errors with some additional information. Many popular Go packages use their own implementations of the error interface, imgproxy is not the exception. Here, I use my custom imgproxyError type that can tell HTTP handler what status to respond with, keeps a message that should be shown to a user, and a message that should appear in the log.
+返回错误的时候如果有额外的信息，这总归是好的。许多流行的Go包都会用他们自己实现的error接口，比如我的imgproxy也不例外。此处，我用了自定义的imgproxyError struct，它来告诉http handler应该返回什么http status code，返回给上层调用者什么消息，在log中应该打印什么信息。
 
 ```go
 type imgproxyError struct {
@@ -151,7 +152,7 @@ func (e *imgproxyError) Error() string {
 }
 ```
 
-And here is how I use it:
+来演示一下我是如何用这种方式的:
 
 ```go
 if ierr, ok := err.(*imgproxyError); ok {
@@ -162,9 +163,9 @@ if ierr, ok := err.(*imgproxyError); ok {
 }
 ```
 
-What I do here is checking if the error is of my custom type, and if not—I consider this error unexpected. I convert it to an imgproxyError instance that tells HTTP handler to respond with 500 status code and print the error message to the log.
+而在之前，我所做的就是检查错误类型是否是我所定义的类型，不是我定义的类型说明不是预期的error。那么就将它转化成imgproxyError实例，以此来告诉http handler去响应500的状态码并让程序在log中打印错误信息。
 
-An important note on typecasting in Go, as it often puzzles newcomers. You can typecast interfaces in two ways, and it is often better to stay on a safer side:
+这里有必要说一个go中类型转换的注意事项，毕竟它总是让新手困扰。你可以通过两种方式进行类型转换，不过建议最好还是用相对safe的方式：
 
 ```go
 // Unsafe. If err is not *imgproxyError, Go will panic.
@@ -175,15 +176,15 @@ ierr := err.(*imgproxyError)
 ierr, ok := err.(*imgproxyError)
 ```
 
-Now that we have seen that Go’s idiomatic error handling can be quite flexible, it is time to move on to the next stage of mental processing—bargaining
+现在，我们可以看到Go惯用的错误处理可以非常的灵活，接下来就会进入到下一阶段的心理处理环节—讨价还价。
 
 ### Bargaining
 
-“Just-in-place error handling still looks strange to me. Maybe I can do something to make it resemble my favorite language more?”
+“哪里出现error，哪里处理error”，这种错误处理的方式依旧对我来说很陌生，也许我能做些什么让它更像我喜欢的语言。
 
-Handling errors at each and every place in code where they might happen may quickly become cumbersome, though. There are times when we want to bubble all our errors up to some place where we can handle them in bulk. The most obvious way to go here is to use nested function invocations, handling all errors coming from helpers inside the principal function that gets called first.
+在代码每个可能出现的地方都进行错误处理是一件很麻烦的事情。有好多时候，我们都想把error提升到某些可以批量或集中处理的地方。这种方式，最显而易见的就是函数嵌套调用，在最上层处理掉来自底层的方法所产生的错误。
 
-Take a look at this admittedly contrived example of a function calling a function, which calls yet another function. We want to handle all the errors in the topmost one:
+看一下这个公认的函数调用函数的例子，期望在最顶层处理掉所有的error：
 
 ```go
 import (
@@ -230,13 +231,12 @@ func Sqrt(f float64) (float64, error) {
 }
 ```
 
-It is an idiomatic Go way, and yes, it looks kind of bulky. Luckily, the creators of the language seem to admit this problem. An alternative way of checking and handling errors for Go 2 is currently under discussion. The official error handling draft design introduces a new check.. handle construct. Here is how it works, based on the draft:
+这是Go语言惯用的方式，是的，看起来又臭又长。好在，写Go语言的人好像也承认了这个问题。目前他们正在就Go 2的错误检查和处理问题，发起讨论。官方错误处理草案引入了一个新的construct （check ... handle），关于它是如何工作的，草案是这么说的：
 
-- The check statement applies to an expression of type error or a function call returning a list of values ending in a value of type error. If the error is non-nil, a check returns from the enclosing function by returning the result of invoking the handler chain with the error value.
+- check语句适用于error类型的表达式或者函数返回以error类型值结尾的函数调用。如果error非nil，check语句将会返回闭包方法的结果，而这个闭包方法是通过error值调用处理程序链触发的。
+- handle语句定义的代码块就是handler，用来处理check语句检测到的error。handler中的return语句会导致闭包函数立刻返回给定的返回值。只有闭包函数没有结果或使用named结果的时候， 才允许不带返回值。在后一种情况下，函数返回那些结果的当前值。
 
-- The handle statement defines a block, called a handler, to handle an error detected by a check. A return statement in a handler causes the enclosing function to return immediately with the given return values. A return without values is only allowed if the enclosing function has no results or uses named results. In the latter case, the function returns with the current values of those results.
-
-Let’s see how our handy square root logging might look like in an alternative universe, where Go 2 is already out, and the draft proposal is accepted as is:
+依旧是square的例子，现在用另一种方式来进行错误处理。Go 2已经发布，官方建议的写法如下：
 
 ```go
 import (
@@ -265,13 +265,13 @@ func Sqrt(f float64) (float64, error) {
 }
 ```
 
-That looks much better, but at the time of this writing Go 2 is still a distant future.
+看上去好一些了，但是距离真正用Go 2做实际开发仍旧有一段距离。
 
-In the meantime, we can use an alternative way of error handling that reduces the amount of if...else statements considerably and still allows us to have a single point of failure. I like to call this approach “Panic-Driven Error Handling”.
+与此同时，其实我们可以用另一种错误处理的方式，他可以显著减少if ... else语句，并且允许出现单点的error。我叫这种方法为“Panic驱动的错误处理”
 
-To become “panic-driven”, we are going to rely on three keywords that are already built into the language: defer, panic and recover. Here is a reminder of what they do:
+为了做到“Panic驱动”，将依赖内置于Go语言的三个关键词：defer，panic，recover。这里稍微回顾一下他们分时是什么：
 
-- defer pushes function call into a list that will be executed after the surrounding function returns. Useful when you need some cleanup or, in our case, when you need to recover after a panic.
+- defer将函数push到本函数返回后执行的列表中，当你需要一些清理时候回排上用场。在我们的这个case里面，什么时候回用到defer呢？就是从panic中recover的时候，需要用到defer
 
 ```go
 func Foo() {
@@ -282,13 +282,12 @@ defer f.Close()
 }
 ```
 
-- panic stops the ordinary flow of control and begins panicking. When some function starts to panic, its execution stops, the process goes up to the call stack executing all deferred functions, and, at the root of the current goroutine, the program crashes.
+- panic会停止普通的程序流控制并开始panicking。当函数开始panic，程序的正常执行会被中止，程序开始调用堆栈执行所有的defer方法，同时在当前的goroutine的root goroutine程序开始崩溃。
+- recover重新获取正在panic的goroutine的控制，并返回触发panic的interface。recover仅在defer中有效，在其他地方将返回nil。
 
-- recover regains control of a panicking goroutine and returns the interface that was provided to panic. It is only useful inside deferred functions, elsewhere it will return nil.
+Btw，纯粹的讲，下面的代码不代表最常见的Go。灵感来自于Gin的源码（Gin是当前比较流行的go领域的web框架）我自己并没有完全想的出它。 在Gin框架里面，如果一个critical error发生了，你可以在handler程序中调用panic，然后Gin会recover，打印错误日志并且返回500状态码。
 
-Please also note that from a “purist” point of view, code examples below do not represent the most idiomatic Go. I did not come up with it entirely by myself though: the inspiration is taken from the source code for Gin, a popular web framework in Go universe. In Gin, if a critical error occurs while processing a request, you can call panic(err) inside a handler, and Gin will recover under the hood, log an error message, and return status 500 to the user.
-
-The idea for “Panic-Driven Error Handling” is simple: panic whenever a nested invocation returns an error, and then recover from it in a single, dedicated place:
+由Panic驱动错误处理的想法很简单：只要嵌套调用返回error引发的panic（译者注：checkErr封装作为reference，有多处地方调用），在recover的时候有单独的地方进行错误处理：
 
 ```go
 import (
@@ -342,18 +341,18 @@ func Sqrt(f float64) (float64, error) {
 }
 ```
 
-Admittedly, that does not look like try...catch you might be used to in other languages, but it still allows us to move a single error handling responsibility up the call chain.
+的确， 这看起来不像其他语言上的try catch，但是却让我们将错误处理这样的责任移动到对应的调用链上。
 
-In imgproxy, I use this approach to stop image processing if the timeout is reached (see here, and here). The goal is not to bother about returning timeout errors from each function, and I can use one-line timeout checks wherever I want.
+在imgproxy这个模块里面，我用这种方式实现当达到timeout就停止图片加载。回到之前说的，如果在每个方法中达到timeout就要进行timeout error的handle，这是很让人烦恼的，现在，我可以在任何地方用一行代码进行timeout的check。
 
-We may also want to add more information about the error’s context, but Golang’s standard error type does not provide us with a stack trace. Luckily, there is a drop-in replacement of the built-in errors package, located at github.com/pkg/errors. All you need to do is replace import "errors" with import "github.com/pkg/errors" in your code—now your errors can contain a stack trace. Just be warned that from now on your are not dealing with a default error type. Here is what an alternative to the standard library gives us:
+关于error的内容，我们也同样希望能添加更多的信息，但是golang的标准错误类型并没有提供堆栈跟踪信息。好在可以直接用github.com/pkg/errors来替换内置的errors包。你只需要用import “github.com/pkg/errors”替换import “errors”，然后你的errors就可以包含堆栈跟踪信息了。注意现在起，你可不是在处理默认的error类型。下面就是标准类库的替代方案所建议的：
 
-- func New(message string) is analogous to the function of the same name in the built-in errors package. This implementation returns a special error type that contains a stack trace.
-- func WithMessage(err error, message string) error wraps your error into a type that contains an additional message.
-- func WithStack(err error) error wraps your error into a type that contains a stack trace. Useful when you are using your own type of error or want to add a stack trace to an error from a third-party package.
-- func Wrap(err error, message string) error is a shorthand for WithStack + WithMessage.
+- func New(message string) 是类似于内置errors包的同名函数。它实现并返回了包含堆栈信息的error类型
+- func WithMessage(err error,message string) 将你的error封装到另一个类型里面， 并且这个类型包含了一些额外的信息。
+- fuc WithStack(err error) error 封装了你的error到另一个类型， 这个类型包含了堆栈信息。当你用第三方package，想将当前类型的error添加到第三方包的error；或者想要添加对战信息到第三方包的error。
+- func Wrap(err error,messag string) error 是WithStack+WitchMessage的缩写。
 
-Let’s improve our code by using these functions:
+试着用刚才说的方法改进一下之前的代码：
 
 ```go
 import (
@@ -419,7 +418,7 @@ func Sqrt(f float64) (float64, error) {
 }
 ```
 
-**Important note:** As you have perhaps already noticed, errors.WithMessage and error.WithStack wraps default error into a custom type. It means that you cannot typecast to your own error implementation directly. To do so, unwrap the error with the errors.Cause function first:
+**重要提示**：也许你已经注意到了，errors.WithMessage 和errors.WithStack 将github.com/pkg/errors封装进了定义类型里面。 这同时意味着你不能对自己的error实现直接的进行类型转化了。为了能将github.com/pkg/errors类型转化成你自己的error类型，首先需要用errors.Cause对github.com/pkg/errors进行解包：
 
 ```go
 err := PerformValidation()
@@ -428,9 +427,9 @@ if verr, ok := errors.Cause(err).(*ValidationErr); ok {
 }
 ```
 
-Now you have a powerful mechanism to deal with all relevant errors in one place. Don’t get too excited though, as this approach will fail you once you unleash the greatest power of Go that is goroutines.
+现在看似有强大的机制在一个地方集中处理相关的错误。但是别高兴的太早，Go语言中最强大的就是goroutine，goroutine在并发的情况下，这种方法将会失败。
 
-And this is the moment when the depression may come.
+接下来我们就讲讲这种让人沮丧的时刻-抑郁。
 
 ### Depression 抑郁
 
