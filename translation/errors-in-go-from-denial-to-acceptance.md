@@ -431,15 +431,19 @@ Now you have a powerful mechanism to deal with all relevant errors in one place.
 
 And this is the moment when the depression may come.
 
-### Depression
+### Depression 抑郁
 
 I worked hard to have a single point of failure in my code, but then everything broke as I ran some goroutines. This fancy error handling business is entirely pointless…
+我努力的在我的代码中采用单点失败的方式，但是当我在使用 goroutines 的时候它却失效了。这种错误处理机制变得毫无意义。。。
 
 Don’t panic, leave panicking to your code. Handling problems arising inside goroutines in a single place is still possible, and I will describe not one, but two approaches I use for that.
+不要恐慌，将恐慌留给你的代码。在 goroutines 中的固定位置处理问题依然可行，此处我将使用不止一种方法（实际上是两种）。
 
-### Channels and sync.WaitGroup
+
+### Channels and sync.WaitGroup Channels 和 sync.WaitGroup
 
 You can use the combination of Go’s channels and the built-in sync.Waitgroup to make your goroutines report errors on a dedicated channel and handle them one after another after the asynchronous processing is done:
+你可以将 Go 的 channel 和内置的 sync.Waitgroup 结合起来使用，这样就可以在特定的 channel 中报告相应的 errors，同时在异步进程处理完成后可以一个个的处理它们。
 
 ```go
 errCh := make(chan error, 2)
@@ -481,8 +485,10 @@ for err := range errCh {
 ```
 
 This way proves useful when you need to “gather up” all errors that occurred inside multiple goroutines.
+当你需要在多个 goroutines 中收集所有错误时，这种方法将非常有用。
 
 But in truth, we rarely need to handle each error. In most cases, it’s all or nothing: we just need to know if any of our goroutines failed. For this, we are going to use the errgroup package from one of Golang’s official subrepositories. Here is how:
+通常情况下，我们很少需要处理每个一个错误。多数情况下，要么全处理要么不处理：我们需要知道是否其中一些 goroutines 失败了。因此，我们准备使用 Golang 官方的子代码库中的 errgroup 包。下面代码展示了如何使用它：
 
 ```go
 var g errgroup.Group
@@ -516,6 +522,7 @@ if err := g.Wait(); err != nil {
 ```
 
 Only the first non-nil error (if any) from one of the subroutines launched from the inside of errgroup.Group will be returned. All the heavy lifting is done behind the scenes.
+只有 errgroup.Group 内部启动的 subroutines 中的第一个非零错误（如果有）才会被返回。而所有繁重的工作都是在幕后完成的。
 
 ### Roll your own PanicGroup
 
